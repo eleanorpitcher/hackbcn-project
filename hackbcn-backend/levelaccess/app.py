@@ -1,14 +1,16 @@
 from flask import Flask, jsonify, request, abort
+from flask_caching import Cache
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
-from levelaccess.api import get_image, get_coordinates
+from levelaccess.api import get_mapillary_images, get_coordinates
 
 app = Flask("levelaccess")
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///places.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
 
 
 class Place(db.Model):
@@ -38,44 +40,7 @@ class Place(db.Model):
 with app.app_context():
     db.create_all()
 
-
-@app.route('/')
-def home():
-    return "Hello, World!"
-
-
-@app.route('/images/<query>')
-def images(query):
-    images = get_image(query)
-    return images
-
-
-@app.route('/places', methods=['GET'])
-def get_places():
-    places = Place.query.all()
-    return jsonify([place.to_dict() for place in places])
-
-
-@app.route('/place/<int:place_id>', methods=['GET'])
-def get_place(place_id):
-    place = Place.query.get(place_id)
-    if place is None:
-        abort(404, description="Place not found")
-    return jsonify(place.to_dict())
-
-
-@app.route('/placeinfo/<query>', methods=['GET'])
-def get_placeinfo(query):
-    location = get_coordinates(query)
-    return jsonify(location.raw)
-
-
-@app.route('/add_place/<query>', methods=['GET'])
-def add_place(query):
-    # Example route to add a new place
-    # data = request.json
-    location = get_coordinates(query)
-    data = location.raw
+def add_place(data):
     new_place = Place(
         name=data['name'],
         address=data['display_name'],
@@ -86,6 +51,57 @@ def add_place(query):
     )
     db.session.add(new_place)
     db.session.commit()
+
+
+@app.route('/')
+def home():
+    return "Hello, World!"
+
+
+@app.route('/images/<place_id>')
+@cache.cached(timeout=300, key_prefix='images')  # Cache for 300 seconds (5 minutes)
+def images(place_id):
+    place = Place.query.get(place_id)
+    if place is None:
+        abort("Place not found")
+    lat = place.lat
+    lon = place.lon
+    images = get_mapillary_images(lat, lon)
+    return jsonify(images)
+
+
+@cache.cached(timeout=300)  # Cache for 300 seconds (5 minutes)
+@app.route('/places', methods=['GET'])
+def get_places():
+    places = Place.query.all()
+    return jsonify([place.to_dict() for place in places])
+
+
+@cache.cached(timeout=300, key_prefix='place')  # Cache for 300 seconds (5 minutes)
+@app.route('/place/<int:place_id>', methods=['GET'])
+def get_place(place_id):
+    place = Place.query.get(place_id)
+    if place is None:
+        abort(404, description="Place not found")
+    return jsonify(place.to_dict())
+
+
+@cache.cached(timeout=300, key_prefix='search')  # Cache for 300 seconds (5 minutes)
+@app.route('/search/<query>', methods=['GET'])
+def search(query):
+    location = get_coordinates(query)
+    data = location.raw
+    existing = Place.query.filter_by(name=data['name']).first()
+    if existing:
+        return existing.to_dict()
+    new_place = add_place(location.raw)
+    return jsonify(new_place.to_dict())
+
+
+@app.route('/add_place/<query>', methods=['GET'])
+def add_place(query):
+    location = get_coordinates(query)
+    new_place = add_place(location.raw)
     return jsonify({"message": "Place added successfully", "place": new_place.to_dict()}), 201
 
 

@@ -1,6 +1,5 @@
 # get picture from addres
 
-import json
 from geopy.geocoders import Nominatim
 from functools import lru_cache
 import mapillary.interface as mly
@@ -17,6 +16,7 @@ def get_coordinates(address):
     return location
 
 
+@lru_cache(maxsize=100)
 def get_mapillary_images(lat, lon, radius=60, limit=5):
     data = mly.get_image_looking_at(
         at=dict(
@@ -24,23 +24,13 @@ def get_mapillary_images(lat, lon, radius=60, limit=5):
             lat=lat,
         ),
         radius=radius,
-        # limit=limit,
     )
 
-    print(len(data.features))
-    # import pdb;pdb.set_trace()
-    ids = [
-        dd.properties.id
-        for dd in data.features
-    ]
-    res = 256
-    thumbs = []
-    for image_id in ids:
+    res = 2048
+    if data:
+        image_id = data.features[0].properties.id
         thumb_path = mly.image_thumbnail(image_id=image_id, resolution=res)
-        thumbs.append(thumb_path)
-    
-    generate_image_grid_html(thumbs)
-    return data
+        return thumb_path
 
 
 def generate_image_grid_html(image_paths, columns=3, output_file='image_grid.html'):
