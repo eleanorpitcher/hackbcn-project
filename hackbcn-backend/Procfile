@@ -1,1 +1,1 @@
-web: gunicorn --worker-tmp-dir /dev/shm levelaccess:app
+web: gunicorn --worker-tmp-dir /dev/shm --chdir levelaccess app:app
