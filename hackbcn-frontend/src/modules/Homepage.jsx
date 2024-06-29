@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Homepage.scss'; // Assuming you have a separate SCSS file for styling
 import LogoL from '../assets/logo-L.png';
+import { fetchPlaces } from '../apiService'
 
 function Homepage() {
   const locations = ['Barcelona', 'London', 'Paris'];
@@ -8,6 +9,13 @@ function Homepage() {
   const [inputValue, setInputValue] = useState('');
   const [filteredLocations, setFilteredLocations] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [places, setPlaces] = useState([])
+
+  useEffect(()=>{
+    fetchPlaces()
+    .then(data => setPlaces(data))
+    .catch((err)=>console.log(err))
+  },[])
 
   const handleInputChange = (event) => {
     const value = event.target.value.toLowerCase();

@@ -3,7 +3,8 @@ import './App.css'
 import Homepage from './modules/Homepage'
 import Company from './modules/Company'
 import Navbar from './components/Navbar'
-import { Route, Routes } from 'react-router-dom'
+import Place from './modules/Place'
+import { Route, Routes} from 'react-router-dom'
 
 function App() {
 
@@ -13,6 +14,8 @@ function App() {
       <Routes>
         <Route element={<Homepage/>} path="/"></Route>
         <Route element={<Company/>} path="/dummy-company"></Route>
+        <Route element={<Place/>} path="/places/:id"></Route>
+
       </Routes>
     </>
   )
