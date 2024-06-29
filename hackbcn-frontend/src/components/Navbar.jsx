@@ -1,11 +1,12 @@
 import React from 'react';
 import LevelAccessLogo from '../assets/logo.png'
+import './Navbar.scss'
 
 const Navbar = () => {
     return (
-        <nav style={{display:'flex', width: '100%', margin: '0'}}>
+        <nav className='navbar'>
             <div>
-                <img src={LevelAccessLogo} alt="" style={{width:'20%'}} />
+                <img src={LevelAccessLogo} alt="" className='navbar-logo' />
             </div>
         </nav>
     );
