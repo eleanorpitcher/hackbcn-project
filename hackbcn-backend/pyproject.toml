@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "hackBCN"
+version = "0.1.0"
+description = "A short description of the hackBCN project"
+authors = ["Your Name <doruchan@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/doruchan/hackBCN"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+geopy = "^2.2.0"
+mapillary = "^0.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
