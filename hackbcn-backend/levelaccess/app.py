@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, request, abort
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
 from levelaccess.api import get_image, get_coordinates
 
 app = Flask("levelaccess")
+CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///places.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
