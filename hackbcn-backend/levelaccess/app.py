@@ -13,7 +13,7 @@ CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///places.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["UPLOAD_EXTENSIONS"] = [".jpg", ".png"]
-app.config["UPLOAD_PATH"] = "images"
+app.config["UPLOAD_PATH"] = "../images"
 db = SQLAlchemy(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
 migrate = Migrate(app, db)
