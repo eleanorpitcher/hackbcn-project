@@ -7,7 +7,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 import os
 import json
 
-from levelaccess.api import get_mapillary_images, get_coordinates, send_prediction_request
+from levelaccess.api import get_mapillary_images, get_coordinates, probabilities
 
 app = Flask("levelaccess")
 CORS(app)
@@ -122,7 +122,7 @@ def calculate(place_id):
     _get_image(place)
     
     # send to model
-    send_prediction_request(place_id, place.image_url)
+    # send_prediction_request(place_id, place.image_url)
 
     return jsonify(place.to_dict()), 200
 
@@ -177,16 +177,19 @@ def add_place(query):
     return jsonify({"message": "Place added successfully", "place": new_place.to_dict()}), 201
 
 
-@app.route('/probability/<int:place_id>', methods=['GET'])
-def update_probability(place_id):
-    place = Place.query.get(place_id)
-    if place is None:
-        abort(404, description="Place not found")
-    place.probability = 75
-    place.probability_reason = "Although there is a step for this entrace, there is also a ramp available. It is very likely that a wheelchair user can enter this place."
+@app.route('/fix_probabilities', methods=['GET'])
+def update_probability():
+    for place_id, values in probabilities.items():
+
+        place = Place.query.get(place_id)
+        if place is None:
+            abort(404, description="Place not found")
+        place.probability = values["probability"]
+        place.probability_reason = values["probability_reason"]
     
     db.session.commit()
-    return jsonify(place.to_dict())
+    return True
+    # return jsonify(place.to_dict())
 
 
 @app.route("/<path:path>", methods=["POST"])

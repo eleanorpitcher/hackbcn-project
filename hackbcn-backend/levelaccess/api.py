@@ -122,5 +122,21 @@ def send_prediction_request(place_id, img_path):
     )
 
 
+probabilities = {
+    1: {
+        "probability": 75,
+        "probability_reason": "Although there is a step for this entrace, there is also a ramp available. It is very likely that a wheelchair user can enter this place.",
+    },
+    2: {
+        "probability": 15,
+        "probability_reason": "The entrance has multiple steps, which will make this entrance not accessible by a wheelchair",
+    },
+    3: {
+        "probability": 17,
+        "probability_reason": "The entrance has a big step."
+    }
+}
+
+
 if __name__ == "__main__":
     get_image(address)
