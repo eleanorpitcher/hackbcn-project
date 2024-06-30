@@ -1,7 +1,9 @@
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
+from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+import os
 
 from levelaccess.api import get_mapillary_images, get_coordinates
 
@@ -9,8 +11,11 @@ app = Flask("levelaccess")
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///places.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["UPLOAD_EXTENSIONS"] = [".jpg", ".png"]
+app.config["UPLOAD_PATH"] = "images"
 db = SQLAlchemy(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
+migrate = Migrate(app, db)
 
 
 class Place(db.Model):
@@ -21,6 +26,8 @@ class Place(db.Model):
     lon = db.Column(db.Float(), nullable=False)
     type = db.Column(db.String(100), nullable=False)
     picture_url = db.Column(db.String(200))
+    probability = db.Column(db.Float())
+    probability_reason = db.Column(db.String(500))
 
     def __repr__(self):
         return f'<Place {self.name}>'
@@ -33,22 +40,19 @@ class Place(db.Model):
             'lat': self.lat,
             'lon': self.lon,
             'type': self.type,
-            'picture_url': self.picture_url
+            'probability': self.probability,
+            'probability_reason': self.probability_reason,
+            'picture_url': self.picture_url,
         }
+
 
 # Create the database tables
 with app.app_context():
     db.create_all()
 
+
 def add_place(data):
-    new_place = Place(
-        name=data['name'],
-        address=data['display_name'],
-        lat=data['lat'],
-        lon=data['lon'],
-        type=data['type'],
-        # thumbnail=data.get('thumbnail')  # picture_url is optional
-    )
+    new_place = Place(**data)
     db.session.add(new_place)
     db.session.commit()
 
@@ -58,26 +62,57 @@ def home():
     return "Hello, World!"
 
 
-@app.route('/images/<place_id>')
-@cache.cached(timeout=300, key_prefix='images')  # Cache for 300 seconds (5 minutes)
-def images(place_id):
+@app.route('/image/<place_id>')
+@cache.cached(timeout=300, key_prefix='image')
+def get_image(place_id):
     place = Place.query.get(place_id)
     if place is None:
         abort("Place not found")
-    lat = place.lat
-    lon = place.lon
-    images = get_mapillary_images(lat, lon)
-    return jsonify(images)
+
+    existing = ["la_danesa", "framed_gang", "the_outpost"]
+    if place.picture_url is None:
+
+        if place.name.lower().replace(" ", "_") in existing:
+            path = os.path.join(app.config["UPLOAD_PATH"], image_path)
+            place.picture_url = image_path
+            db.session.commit()
+            return path
+
+        lat = place.lat
+        lon = place.lon
+        image_path = get_mapillary_images(lat, lon)
+        
+        place.picture_url = image_path
+        db.session.commit()
+        
+        return image_path
+
+    return place.picture_url
 
 
-@cache.cached(timeout=300)  # Cache for 300 seconds (5 minutes)
+@app.route('/place/<int:place_id>', methods=['PUT'])
+def update_place(place_id):
+    place = Place.query.get(place_id)
+    if place is None:
+        abort(404, description="Place not found")
+    
+    data = request.json
+
+    for key, value in data.items():
+        setattr(place, key, value)
+    
+    db.session.commit()
+    return jsonify(place.to_dict()), 200
+
+
+@cache.cached(timeout=300)
 @app.route('/places', methods=['GET'])
 def get_places():
     places = Place.query.all()
     return jsonify([place.to_dict() for place in places])
 
 
-@cache.cached(timeout=300, key_prefix='place')  # Cache for 300 seconds (5 minutes)
+@cache.cached(timeout=300, key_prefix='place')
 @app.route('/place/<int:place_id>', methods=['GET'])
 def get_place(place_id):
     place = Place.query.get(place_id)
@@ -86,7 +121,7 @@ def get_place(place_id):
     return jsonify(place.to_dict())
 
 
-@cache.cached(timeout=300, key_prefix='search')  # Cache for 300 seconds (5 minutes)
+@cache.cached(timeout=300, key_prefix='search')
 @app.route('/search/<query>', methods=['GET'])
 def search(query):
     location = get_coordinates(query)
