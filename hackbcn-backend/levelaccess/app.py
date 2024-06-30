@@ -63,11 +63,14 @@ with app.app_context():
     db.create_all()
 
 
-def _add_place(data):
-    data.pop("place_id")
+def _add_place(orig_data):
+    valid = ("name", "lat", "lon", "address", "type")
+    data = {k: v for k, v in orig_data.items() if k in valid}
+    data["address"] = orig_data["display_name"]
     new_place = Place(**data)
     db.session.add(new_place)
     db.session.commit()
+    return new_place
 
 
 @app.route('/')
