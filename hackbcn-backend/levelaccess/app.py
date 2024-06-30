@@ -51,7 +51,7 @@ class Place(db.Model):
     def image_url(self):
         path = self.picture_url
 
-        if path is not None and not os.path.isabs(path):
+        if path is not None and not path.startswith("http"):
             return url_for("images", filename=path, _external=True)
         return path
 
@@ -93,6 +93,8 @@ def _get_image(place):
 
 @app.route('/images/<filename>')
 def images(filename):
+    print("images", filename)
+    print(_IMAGE_DIR)
     return send_from_directory(_IMAGE_DIR, filename)
 
 
@@ -111,12 +113,9 @@ def calculate(place_id):
     if place is None:
         abort("Place not found")
     
-    image_path = _get_image(place)
-    print("==")
-    print(image_path)
+    _get_image(place)
     
     # send to model
-    # place.picture_url = image_path
     place.probability = 1
     place.probability_reason = "bla bla"
     return jsonify(place.to_dict()), 200
