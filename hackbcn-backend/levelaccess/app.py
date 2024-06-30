@@ -172,5 +172,16 @@ def add_place(query):
     return jsonify({"message": "Place added successfully", "place": new_place.to_dict()}), 201
 
 
+@app.route('/probability/<int:place_id>', methods=['GET'])
+def update_probability(place_id):
+    place = Place.query.get(place_id)
+    if place is None:
+        abort(404, description="Place not found")
+    place.probability = 75
+    place.probability_reason = "Although there is a step for this entrace, there is also a ramp available. It is very likely that a wheelchair user can enter this place."
+    
+    db.session.commit()
+    return jsonify(place.to_dict())
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
