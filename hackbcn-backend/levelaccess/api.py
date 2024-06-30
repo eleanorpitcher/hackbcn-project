@@ -27,7 +27,7 @@ def get_mapillary_images(lat, lon, radius=60, limit=5):
     )
 
     res = 2048
-    if data:
+    if data.features:
         image_id = data.features[0].properties.id
         thumb_path = mly.image_thumbnail(image_id=image_id, resolution=res)
         return thumb_path

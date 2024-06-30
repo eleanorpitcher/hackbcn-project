@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort, send_from_directory
+from flask import Flask, jsonify, request, abort, url_for,  send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -17,6 +17,7 @@ db = SQLAlchemy(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
 migrate = Migrate(app, db)
 
+_IMAGE_DIR = app.config["UPLOAD_PATH"]
 
 class Place(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -62,32 +63,47 @@ def home():
     return "Hello, World!"
 
 
-@app.route('/image/<place_id>')
+def _get_image(place):
+    pic_name = place.name.lower().replace(" ", "_") + ".jpg"
+    existing = os.listdir(_IMAGE_DIR)
+
+    if True:#place.picture_url is None:
+        if pic_name in existing:
+            image_path =  os.path.join(_IMAGE_DIR, pic_name)
+        else:
+            lat = place.lat
+            lon = place.lon
+            image_path = get_mapillary_images(lat, lon)
+        
+        place.picture_url = image_path
+        db.session.commit()
+
+    return place.picture_url
+
+
 @cache.cached(timeout=300, key_prefix='image')
+@app.route('/image/<int:place_id>')
 def get_image(place_id):
     place = Place.query.get(place_id)
     if place is None:
         abort("Place not found")
 
-    existing = ["la_danesa", "framed_gang", "the_outpost"]
-    if place.picture_url is None:
+    return _get_image(place)
 
-        if place.name.lower().replace(" ", "_") in existing:
-            path = os.path.join(app.config["UPLOAD_PATH"], image_path)
-            place.picture_url = image_path
-            db.session.commit()
-            return path
 
-        lat = place.lat
-        lon = place.lon
-        image_path = get_mapillary_images(lat, lon)
-        
-        place.picture_url = image_path
-        db.session.commit()
-        
-        return image_path
+@app.route('/calculate/<int:place_id>')
+def calculate(place_id):
+    place = Place.query.get(place_id)
+    if place is None:
+        abort("Place not found")
+    
+    image_path = _get_image(place)
+    
+    # send to model
 
-    return place.picture_url
+    place.probability = 1
+    place.probability_reason = "bla bla"
+    return jsonify(place.to_dict()), 200
 
 
 @app.route('/place/<int:place_id>', methods=['PUT'])
