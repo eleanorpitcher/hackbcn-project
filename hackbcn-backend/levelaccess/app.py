@@ -17,7 +17,7 @@ db = SQLAlchemy(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
 migrate = Migrate(app, db)
 
-_IMAGE_DIR = app.config["UPLOAD_PATH"]
+_IMAGE_DIR = os.path.realpath(app.config["UPLOAD_PATH"])
 
 class Place(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -67,18 +67,22 @@ def _get_image(place):
     pic_name = place.name.lower().replace(" ", "_") + ".jpg"
     existing = os.listdir(_IMAGE_DIR)
 
-    if True:#place.picture_url is None:
-        if pic_name in existing:
-            image_path =  os.path.join(_IMAGE_DIR, pic_name)
-        else:
-            lat = place.lat
-            lon = place.lon
-            image_path = get_mapillary_images(lat, lon)
+    if pic_name in existing:
+        return url_for("images", filename=pic_name, _external=True)
+   
+    if place.picture_url is None:
+        lat = place.lat
+        lon = place.lon
+        image_path = get_mapillary_images(lat, lon)
         
         place.picture_url = image_path
         db.session.commit()
-
     return place.picture_url
+
+
+@app.route('/images/<filename>')
+def images(filename):
+    return send_from_directory(_IMAGE_DIR, filename)
 
 
 @cache.cached(timeout=300, key_prefix='image')
@@ -100,7 +104,7 @@ def calculate(place_id):
     image_path = _get_image(place)
     
     # send to model
-
+    place.picture_url = image_path
     place.probability = 1
     place.probability_reason = "bla bla"
     return jsonify(place.to_dict()), 200
