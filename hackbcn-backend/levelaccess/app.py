@@ -64,6 +64,7 @@ with app.app_context():
 
 
 def _add_place(data):
+    data.pop("place_id")
     new_place = Place(**data)
     db.session.add(new_place)
     db.session.commit()
