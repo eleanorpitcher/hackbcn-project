@@ -13,12 +13,13 @@ CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///places.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["UPLOAD_EXTENSIONS"] = [".jpg", ".png"]
-app.config["UPLOAD_PATH"] = "../images"
+this_dir = os.path.dirname(__file__)
+app.config["UPLOAD_PATH"] = os.path.realpath(os.path.join(this_dir, "../images"))
 db = SQLAlchemy(app)
 cache = Cache(app, config={'CACHE_TYPE': 'SimpleCache'})
 migrate = Migrate(app, db)
 
-_IMAGE_DIR = os.path.realpath(app.config["UPLOAD_PATH"])
+_IMAGE_DIR = app.config["UPLOAD_PATH"]
 
 class Place(db.Model):
     id = db.Column(db.Integer, primary_key=True)
