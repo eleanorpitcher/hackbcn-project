@@ -118,11 +118,8 @@ def calculate(place_id):
     _get_image(place)
     
     # send to model
-    print(place.picture_url)
-    send_prediction_request(place_id, "https://monkfish-app-meuib.ondigitalocean.app/images/le_wagon.jpg")
-    
-    place.probability = 1
-    place.probability_reason = "bla bla"
+    send_prediction_request(place_id, place.picture_url)
+
     return jsonify(place.to_dict()), 200
 
 
