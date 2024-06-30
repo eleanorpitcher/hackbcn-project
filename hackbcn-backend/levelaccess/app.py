@@ -63,7 +63,7 @@ with app.app_context():
     db.create_all()
 
 
-def add_place(data):
+def _add_place(data):
     new_place = Place(**data)
     db.session.add(new_place)
     db.session.commit()
@@ -162,14 +162,14 @@ def search(query):
     existing = Place.query.filter_by(name=data['name']).first()
     if existing:
         return existing.to_dict()
-    new_place = add_place(location.raw)
+    new_place = _add_place(data)
     return jsonify(new_place.to_dict())
 
 
 @app.route('/add_place/<query>', methods=['GET'])
 def add_place(query):
     location = get_coordinates(query)
-    new_place = add_place(location.raw)
+    new_place = _add_place(location.raw)
     return jsonify({"message": "Place added successfully", "place": new_place.to_dict()}), 201
 
 
