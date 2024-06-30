@@ -5,8 +5,9 @@ from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.ext.hybrid import hybrid_property
 import os
+import json
 
-from levelaccess.api import get_mapillary_images, get_coordinates
+from levelaccess.api import get_mapillary_images, get_coordinates, send_prediction_request
 
 app = Flask("levelaccess")
 CORS(app)
@@ -117,6 +118,9 @@ def calculate(place_id):
     _get_image(place)
     
     # send to model
+    print(place.picture_url)
+    send_prediction_request(place_id, "https://monkfish-app-meuib.ondigitalocean.app/images/le_wagon.jpg")
+    
     place.probability = 1
     place.probability_reason = "bla bla"
     return jsonify(place.to_dict()), 200
@@ -182,6 +186,25 @@ def update_probability(place_id):
     
     db.session.commit()
     return jsonify(place.to_dict())
+
+
+@app.route("/<path:path>", methods=["POST"])
+def handle(path):
+    response = request.json
+    place_id = response["input"]["place_id"]
+    output = "".join(response["output"]).replace('\n', "").replace('\\', '')
+    output = json.loads(output)
+    probability = output["probability"]
+    reason = output["probability_reason"]
+    place = Place.query.get(place_id)
+    if place is None:
+        abort(404, description="Place not found")
+    place.probability = probability
+    place.probability_reason = reason
+    db.session.commit()
+
+    return jsonify(place.to_dict())
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
