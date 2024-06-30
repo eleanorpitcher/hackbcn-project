@@ -93,10 +93,7 @@ def get_image(address):
     else:
         print("Could not find coordinates for the given address.")
 
-# export REPLICATE_API_TOKEN=r8_5oGRClw7OJv7lK80Zj9Et2hfE5HVz8w2FJkiE
-
 import os
-os.environ["REPLICATE_API_TOKEN"] = "r8_5oGRClw7OJv7lK80Zj9Et2hfE5HVz8w2FJkiE"
 import replicate
 
 model = replicate.models.get("yorickvp/llava-13b")
