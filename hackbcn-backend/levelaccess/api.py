@@ -1,6 +1,5 @@
 # get picture from addres
 
-import json
 from geopy.geocoders import Nominatim
 from functools import lru_cache
 import mapillary.interface as mly
@@ -17,6 +16,7 @@ def get_coordinates(address):
     return location
 
 
+@lru_cache(maxsize=100)
 def get_mapillary_images(lat, lon, radius=60, limit=5):
     data = mly.get_image_looking_at(
         at=dict(
@@ -24,23 +24,13 @@ def get_mapillary_images(lat, lon, radius=60, limit=5):
             lat=lat,
         ),
         radius=radius,
-        # limit=limit,
     )
 
-    print(len(data.features))
-    # import pdb;pdb.set_trace()
-    ids = [
-        dd.properties.id
-        for dd in data.features
-    ]
-    res = 256
-    thumbs = []
-    for image_id in ids:
+    res = 2048
+    if data.features:
+        image_id = data.features[0].properties.id
         thumb_path = mly.image_thumbnail(image_id=image_id, resolution=res)
-        thumbs.append(thumb_path)
-    
-    generate_image_grid_html(thumbs)
-    return data
+        return thumb_path
 
 
 def generate_image_grid_html(image_paths, columns=3, output_file='image_grid.html'):
@@ -102,6 +92,50 @@ def get_image(address):
         return images
     else:
         print("Could not find coordinates for the given address.")
+
+import os
+import replicate
+
+this_dir = os.path.dirname(__file__)
+prompt_file = os.path.join(this_dir, "prompt.md")
+
+with open(prompt_file, "r") as fb:
+    prompt = fb.read()
+
+
+def send_prediction_request(place_id, img_path):
+    model = replicate.models.get("yorickvp/llava-13b")
+    version = model.versions.get("b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a4191bb742157fb")
+
+    replicate.predictions.create(
+        version=version,
+        input={
+            "image": img_path,
+            "top_p": 1,
+            "prompt": prompt,
+            "max_tokens": 1024,
+            "temperature": 0.2,
+            "place_id": place_id,
+        },
+        webhook="https://hkdk.events/7wllfft288tzks",
+        webhook_events_filter=["completed"]
+    )
+
+
+probabilities = {
+    1: {
+        "probability": 75,
+        "probability_reason": "Although there is a step for this entrace, there is also a ramp available. It is very likely that a wheelchair user can enter this place.",
+    },
+    2: {
+        "probability": 15,
+        "probability_reason": "The entrance has multiple steps, which will make this entrance not accessible by a wheelchair",
+    },
+    3: {
+        "probability": 17,
+        "probability_reason": "The entrance has a big step."
+    }
+}
 
 
 if __name__ == "__main__":

@@ -16,3 +16,9 @@ venv/Scripts/deactivate
 
 ## dump requirements
 pip freeze > requirements.txt
+
+# db migrate to add new columns
+
+flask db init
+flask db migrate -m "Add new columns to Place"
+flask db upgrade
