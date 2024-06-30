@@ -96,16 +96,17 @@ def get_image(address):
 import os
 import replicate
 
-model = replicate.models.get("yorickvp/llava-13b")
-version = model.versions.get("b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a4191bb742157fb")
-
 this_dir = os.path.dirname(__file__)
 prompt_file = os.path.join(this_dir, "prompt.md")
 
 with open(prompt_file, "r") as fb:
     prompt = fb.read()
 
+
 def send_prediction_request(place_id, img_path):
+    model = replicate.models.get("yorickvp/llava-13b")
+    version = model.versions.get("b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a4191bb742157fb")
+
     replicate.predictions.create(
         version=version,
         input={
