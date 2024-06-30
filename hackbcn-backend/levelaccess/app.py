@@ -3,6 +3,7 @@ from flask_caching import Cache
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.ext.hybrid import hybrid_property
 import os
 
 from levelaccess.api import get_mapillary_images, get_coordinates
@@ -43,8 +44,16 @@ class Place(db.Model):
             'type': self.type,
             'probability': self.probability,
             'probability_reason': self.probability_reason,
-            'picture_url': self.picture_url,
+            'picture_url': self.image_url,
         }
+
+    @hybrid_property
+    def image_url(self):
+        path = self.picture_url
+
+        if path is not None and not os.path.isabs(path):
+            return url_for("images", filename=path, _external=True)
+        return path
 
 
 # Create the database tables
@@ -64,13 +73,15 @@ def home():
 
 
 def _get_image(place):
-    pic_name = place.name.lower().replace(" ", "_") + ".jpg"
-    existing = os.listdir(_IMAGE_DIR)
-
-    if pic_name in existing:
-        return url_for("images", filename=pic_name, _external=True)
-   
     if place.picture_url is None:
+        pic_name = place.name.lower().replace(" ", "_") + ".jpg"
+        existing = os.listdir(_IMAGE_DIR)
+
+        if pic_name in existing:
+            place.picture_url = pic_name
+            db.session.commit()
+            return place.picture_url
+   
         lat = place.lat
         lon = place.lon
         image_path = get_mapillary_images(lat, lon)
@@ -85,7 +96,6 @@ def images(filename):
     return send_from_directory(_IMAGE_DIR, filename)
 
 
-@cache.cached(timeout=300, key_prefix='image')
 @app.route('/image/<int:place_id>')
 def get_image(place_id):
     place = Place.query.get(place_id)
@@ -102,9 +112,11 @@ def calculate(place_id):
         abort("Place not found")
     
     image_path = _get_image(place)
+    print("==")
+    print(image_path)
     
     # send to model
-    place.picture_url = image_path
+    # place.picture_url = image_path
     place.probability = 1
     place.probability_reason = "bla bla"
     return jsonify(place.to_dict()), 200
